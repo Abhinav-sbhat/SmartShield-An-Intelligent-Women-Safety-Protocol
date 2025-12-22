@@ -85,9 +85,16 @@ git clone https://github.com/Abhinav-sbhat/SmartShield-An-Intelligent-Women-Safe
 cd SmartShield-An-Intelligent-Women-Safety-Protocol
 
 pip install flask pywhatkit
-
+```
+Firstly run This file you will get local host address then Click ctrl c 
+```bash
+python Run_file.py
+```
+Then Run this File
+```bash
 python app.py
-
+```
+```bash
 http://127.0.0.1:5000
 ```
 
