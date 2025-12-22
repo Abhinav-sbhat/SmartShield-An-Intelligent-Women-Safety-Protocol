@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Re-enter Passcode</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            padding: 40px 20px;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        h1 {
+            font-size: 2.8em;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0000;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        h2 {
+            font-size: 1.6em;
+            color: #ff4444;
+            text-shadow: 0 0 10px #ff0000;
+            margin-bottom: 30px;
+        }
+        #timer {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 15px #ff0000;
+            margin: 20px 0;
+        }
+        .passcode-input {
+            width: 80%;
+            max-width: 320px;
+            padding: 18px;
+            font-size: 1.8em;
+            background: rgba(50, 50, 50, 0.7);
+            border: 2px solid #ff0000;
+            border-radius: 15px;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            margin: 30px auto;
+        }
+        .btn {
+            padding: 18px 50px;
+            font-size: 1.6em;
+            background: #000;
+            color: #fff;
+            border: 3px solid #ff0000;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 30px #ff0000, inset 0 0 20px rgba(255, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            box-shadow: 0 0 50px #ff0000, inset 0 0 30px rgba(255, 0, 0, 0.8);
+            transform: scale(1.05);
+        }
+        #location-status {
+            margin-top: 40px;
+            font-size: 1.3em;
+            padding: 15px;
+            border-radius: 15px;
+            background: rgba(50, 0, 0, 0.6);
+            border: 1px solid #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .success { color: #00ff00; text-shadow: 0 0 10px #00ff00; }
+        .error   { color: #ff0000; text-shadow: 0 0 10px #ff0000; }
+        .info    { color: #ff8800; text-shadow: 0 0 10px #ff8800; }
+    </style>
+
+    <script>
+        let countdown;
+        let watchId = null;
+
+        function startTimer(duration) {
+            let timer = duration;
+            const display = document.getElementById('timer');
+
+            countdown = setInterval(function () {
+                const seconds = timer < 10 ? "0" + timer : timer;
+                display.textContent = seconds + " seconds remaining";
+
+                if (--timer < 0) {
+                    clearInterval(countdown);
+                    display.textContent = "Time's up! Sending alert...";
+                    document.getElementById('passcodeForm').submit();
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (countdown) clearInterval(countdown);
+            document.getElementById('timer').textContent = "Cancelled";
+        }
+
+        // MAXIMUM ACCURACY GEOLOCATION
+        function getAndSendLocation() {
+            const status = document.getElementById('location-status');
+
+            if (!navigator.geolocation) {
+                status.textContent = "Geolocation not supported on this device.";
+                status.className = "error";
+                return;
+            }
+
+            status.textContent = "Go OUTDOORS with clear sky! Waiting for high-precision GPS lock (up to 2 minutes)...";
+            status.className = "info";
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 120000,   // 2 minutes max wait
+                maximumAge: 0      // Fresh data only
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const accuracy = position.coords.accuracy;
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    if (accuracy <= 30) {  // Only use excellent accuracy (5-30 meters)
+                        fetch('/submit_location', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ lat: lat, lng: lng })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'success') {
+                                status.textContent = `PRECISE LOCATION LOCKED! Accuracy: ~${Math.round(accuracy)} meters`;
+                                status.className = "success";
+                                navigator.geolocation.clearWatch(watchId);
+                                watchId = null;
+                            }
+                        })
+                        .catch(() => {
+                            status.textContent = "Failed to send location.";
+                            status.className = "error";
+                        });
+                    } else {
+                        status.textContent = `Improving GPS lock... Current: ~${Math.round(accuracy)} meters (need ≤30m — stay outdoors!)`;
+                        status.className = "info";
+                    }
+                },
+                (error) => {
+                    let msg = "Location failed: ";
+                    if (error.code === 1) msg += "Permission denied — allow precise location!";
+                    else if (error.code === 2) msg += "No signal — go outdoors!";
+                    else if (error.code === 3) msg += "Timed out — try again outside.";
+                    else msg += error.message;
+
+                    status.textContent = msg;
+                    status.className = "error";
+                    if (watchId) navigator.geolocation.clearWatch(watchId);
+                },
+                options
+            );
+        }
+
+        window.addEventListener('unload', () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        });
+
+        window.onload = function () {
+            startTimer(10);
+            getAndSendLocation();
+
+            const form = document.getElementById('passcodeForm');
+            form.addEventListener('submit', stopTimer);
+            form.addEventListener('keydown', (e) => { if (e.key === "Enter") stopTimer(); });
+        };
+    </script>
+</head>
+<body>
+    <h1>Re-enter Passcode</h1>
+    <h2>Please enter your passcode within 10 seconds</h2>
+    <div id="timer">10 seconds remaining</div>
+
+    <form id="passcodeForm" action="/verify_reenter_passcode" method="POST">
+        <input type="password" id="passcode" name="passcode" class="passcode-input"
+               placeholder="Enter passcode" required autofocus>
+        <br><br>
+        <button type="submit" class="btn">Verify Passcode</button>
+    </form>
+
+    <div id="location-status" class="info">Initializing precise location...</div>
+</body>
+</html>

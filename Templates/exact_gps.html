@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get EXACT Location - Emergency System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 20px #ff0000;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+        
+        .info-box {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid #ff0000;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .location-display {
+            background: #111;
+            border: 2px solid #ff0000;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+        
+        .coordinates {
+            font-size: 1.3rem;
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        
+        .accuracy {
+            font-size: 1rem;
+            color: #FF9800;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #000;
+            color: #fff;
+            border: 2px solid #ff0000;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s;
+            border-radius: 5px;
+        }
+        
+        .btn:hover {
+            background: #ff0000;
+            color: #000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        }
+        
+        .btn-primary {
+            background: #ff0000;
+            color: #000;
+        }
+        
+        .btn-primary:hover {
+            background: #000;
+            color: #ff0000;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ff0000;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success {
+            display: none;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4CAF50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .map-container {
+            height: 300px;
+            border: 2px solid #ff0000;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .steps {
+            margin: 20px 0;
+        }
+        
+        .step {
+            margin: 10px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .step:before {
+            content: '▶';
+            color: #ff0000;
+            position: absolute;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 GET EXACT GPS LOCATION</h1>
+            <p class="subtitle">For life-saving emergency response accuracy</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>⚠️ WHY EXACT LOCATION MATTERS:</h3>
+            <div class="steps">
+                <div class="step">GPS Accuracy: <strong>10-50 meters</strong> (Exact position)</div>
+                <div class="step">IP-based Accuracy: <strong>1-5 kilometers</strong> (Approximate area)</div>
+                <div class="step">In emergencies, <strong>every meter counts</strong></div>
+            </div>
+        </div>
+        
+        <div class="location-display">
+            <h3>Current Location Status:</h3>
+            <div id="coordinates" class="coordinates">Click button below to get exact location</div>
+            <div id="accuracy" class="accuracy">Accuracy: --</div>
+            <div id="address">Address: --</div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Acquiring EXACT GPS location...</p>
+            <p><small>This may take a few seconds</small></p>
+        </div>
+        
+        <div class="success" id="success">
+            <h3>✅ EXACT LOCATION SAVED!</h3>
+            <p>Emergency alerts will now use precise GPS coordinates.</p>
+            <p id="successDetails"></p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn btn-primary" onclick="getExactGPS()" id="gpsBtn">
+                🔍 GET EXACT GPS LOCATION
+            </button>
+            
+            <a href="/set_passcode" class="btn" id="continueBtn" style="display: none;">
+                ✅ CONTINUE TO EMERGENCY SETUP
+            </a>
+            
+            <a href="/" class="btn">
+                ↩ BACK TO HOME
+            </a>
+        </div>
+    </div>
+
+    <!-- Google Maps JavaScript API -->
+    {% if google_maps_key %}
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_key }}&callback=initMap" async defer></script>
+    {% endif %}
+    
+    <script>
+        let map;
+        let marker;
+        
+        // Check if Google Maps key is available
+        const hasGoogleMapsKey = {% if google_maps_key %}true{% else %}false{% endif %};
+        
+        // Initialize map if Google Maps is available
+        function initMap() {
+            if (hasGoogleMapsKey && typeof google !== 'undefined') {
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 12.9716, lng: 77.5946 }, // Bangalore
+                    zoom: 12,
+                    styles: [
+                        { elementType: "geometry", stylers: [{ color: "#000000" }] },
+                        { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
+                        { elementType: "labels.text.fill", stylers: [{ color: "#ff0000" }] }
+                    ]
+                });
+            }
+        }
+        
+        function getExactGPS() {
+            const loading = document.getElementById('loading');
+            const gpsBtn = document.getElementById('gpsBtn');
+            const success = document.getElementById('success');
+            const continueBtn = document.getElementById('continueBtn');
+            
+            // Show loading
+            loading.style.display = 'block';
+            gpsBtn.disabled = true;
+            gpsBtn.innerHTML = '🔄 GETTING GPS SIGNAL...';
+            
+            if (!navigator.geolocation) {
+                alert("Geolocation not supported by your browser.");
+                loading.style.display = 'none';
+                gpsBtn.disabled = false;
+                gpsBtn.innerHTML = '🔍 GET EXACT GPS LOCATION';
+                return;
+            }
+            
+            // Request HIGH ACCURACY location
+            navigator.geolocation.getCurrentPosition(
+                async function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    // Update display
+                    document.getElementById('coordinates').innerHTML = 
+                        `Latitude: <strong>${lat.toFixed(8)}</strong><br>Longitude: <strong>${lng.toFixed(8)}</strong>`;
+                    
+                    document.getElementById('accuracy').innerHTML = 
+                        `Accuracy: <strong>±${Math.round(accuracy)} meters</strong>`;
+                    
+                    // Update map if available
+                    if (hasGoogleMapsKey && typeof google !== 'undefined' && map) {
+                        const userLocation = { lat: lat, lng: lng };
+                        map.setCenter(userLocation);
+                        map.setZoom(18);
+                        
+                        if (marker) {
+                            marker.setPosition(userLocation);
+                        } else {
+                            marker = new google.maps.Marker({
+                                position: userLocation,
+                                map: map,
+                                title: 'Your EXACT Location',
+                                animation: google.maps.Animation.DROP
+                            });
+                        }
+                    }
+                    
+                    // Save to server
+                    await saveExactLocation(lat, lng, accuracy);
+                    
+                    // Show success
+                    loading.style.display = 'none';
+                    success.style.display = 'block';
+                    continueBtn.style.display = 'inline-block';
+                    gpsBtn.innerHTML = '🔄 UPDATE LOCATION';
+                    gpsBtn.disabled = false;
+                    
+                    // Scroll to success
+                    success.scrollIntoView({ behavior: 'smooth' });
+                },
+                function(error) {
+                    loading.style.display = 'none';
+                    gpsBtn.disabled = false;
+                    gpsBtn.innerHTML = '🔍 GET EXACT GPS LOCATION';
+                    
+                    let errorMsg = "GPS Error: ";
+                    switch(error.code) {
+                        case 1:
+                            errorMsg += "Permission denied";
+                            break;
+                        case 2:
+                            errorMsg += "Position unavailable";
+                            break;
+                        case 3:
+                            errorMsg += "Timeout";
+                            break;
+                        default:
+                            errorMsg += "Unknown error";
+                    }
+                    
+                    alert(errorMsg + "\n\nFor emergency alerts, enable location services.");
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        async function saveExactLocation(lat, lng, accuracy) {
+            try {
+                const response = await fetch('/save_exact_location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        latitude: lat,
+                        longitude: lng,
+                        accuracy: accuracy
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.address) {
+                        document.getElementById('address').innerHTML = 
+                            `Address: ${data.address.substring(0, 80)}...`;
+                    }
+                    document.getElementById('successDetails').innerHTML = 
+                        `Accuracy: ±${accuracy}m | ${data.address ? 'Address saved' : 'Coordinates saved'}`;
+                }
+            } catch (error) {
+                console.error('Save location error:', error);
+            }
+        }
+        
+        // Auto-initialize map when Google Maps loads
+        if (hasGoogleMapsKey) {
+            // Check if Google Maps script is loaded
+            function checkGoogleMapsLoaded() {
+                if (typeof google !== 'undefined' && google.maps) {
+                    initMap();
+                } else {
+                    setTimeout(checkGoogleMapsLoaded, 100);
+                }
+            }
+            
+            // Start checking
+            checkGoogleMapsLoaded();
+        }
+    </script>
+</body>
+</html>

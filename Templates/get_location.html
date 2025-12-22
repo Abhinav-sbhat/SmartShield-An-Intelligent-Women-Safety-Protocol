@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Your Location - Emergency System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #d9534f; }
+        .btn {
+            background: #d9534f;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .btn:hover { background: #c9302c; }
+        .btn-success {
+            background: #5cb85c;
+        }
+        .btn-success:hover {
+            background: #4cae4c;
+        }
+        #location-info {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3fe;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        #gps-status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .accuracy-good { color: #4CAF50; }
+        .accuracy-medium { color: #FF9800; }
+        .accuracy-poor { color: #f44336; }
+        .map-link {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Enable Location Access</h1>
+        <p>For accurate emergency alerts, we need your <strong>precise GPS location</strong>.</p>
+        
+        <div id="gps-status">
+            <p>📡 <strong>GPS Accuracy:</strong> <span id="accuracy-text">Waiting...</span></p>
+            <p id="accuracy-desc"></p>
+        </div>
+        
+        <button class="btn" onclick="getLocation()" id="location-btn">
+            🔍 Get My Precise Location
+        </button>
+        
+        <div id="location-info">
+            <h3>✅ Location Captured!</h3>
+            <p><strong>Latitude:</strong> <span id="lat-display"></span></p>
+            <p><strong>Longitude:</strong> <span id="lon-display"></span></p>
+            <p><strong>Accuracy:</strong> <span id="accuracy-display"></span> meters</p>
+            <p id="address-display"></p>
+            
+            <a href="#" id="map-link" class="map-link" target="_blank">
+                🗺️ Verify on Map
+            </a>
+            
+            <button class="btn btn-success" onclick="proceedToPasscode()">
+                ✅ Save Location & Continue
+            </button>
+            
+            <button class="btn" onclick="retryLocation()" style="background: #6c757d;">
+                🔄 Retry Location
+            </button>
+        </div>
+        
+        <div id="error-message" style="display:none; color:#d9534f; margin-top:20px;"></div>
+        
+        <p style="margin-top: 30px; font-size: 14px; color: #666;">
+            <strong>Note:</strong> We only use your location during emergencies.<br>
+            Enable "High Accuracy" mode in your phone settings for best results.
+        </p>
+    </div>
+
+    <script>
+        let currentLocation = null;
+        
+        function getLocation() {
+            const btn = document.getElementById('location-btn');
+            btn.innerHTML = '📡 Detecting Location...';
+            btn.disabled = true;
+            
+            if (!navigator.geolocation) {
+                showError("Geolocation is not supported by your browser");
+                return;
+            }
+            
+            // Request high accuracy
+            const options = {
+                enableHighAccuracy: true,  // Forces GPS usage
+                timeout: 10000,           // 10 seconds timeout
+                maximumAge: 0             // Don't use cached location
+            };
+            
+            navigator.geolocation.getCurrentPosition(
+                // Success callback
+                function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    
+                    currentLocation = {
+                        latitude: lat,
+                        longitude: lon,
+                        accuracy: Math.round(accuracy)
+                    };
+                    
+                    // Update display
+                    document.getElementById('lat-display').textContent = lat.toFixed(6);
+                    document.getElementById('lon-display').textContent = lon.toFixed(6);
+                    document.getElementById('accuracy-display').textContent = Math.round(accuracy);
+                    
+                    // Set accuracy color
+                    const accuracyText = document.getElementById('accuracy-text');
+                    const accuracyDesc = document.getElementById('accuracy-desc');
+                    
+                    if (accuracy < 20) {
+                        accuracyText.innerHTML = '<span class="accuracy-good">Excellent (±' + Math.round(accuracy) + 'm)</span>';
+                        accuracyDesc.textContent = 'GPS is providing precise location';
+                    } else if (accuracy < 100) {
+                        accuracyText.innerHTML = '<span class="accuracy-medium">Good (±' + Math.round(accuracy) + 'm)</span>';
+                        accuracyDesc.textContent = 'Location is reasonably accurate';
+                    } else {
+                        accuracyText.innerHTML = '<span class="accuracy-poor">Poor (±' + Math.round(accuracy) + 'm)</span>';
+                        accuracyDesc.textContent = 'Move to open area for better accuracy';
+                    }
+                    
+                    // Show map link
+                    const mapLink = document.getElementById('map-link');
+                    mapLink.href = `https://maps.google.com/?q=${lat},${lon}`;
+                    
+                    // Show location info
+                    document.getElementById('location-info').style.display = 'block';
+                    
+                    // Get address
+                    getAddress(lat, lon);
+                    
+                    // Save to server
+                    saveLocationToServer(lat, lon, accuracy);
+                },
+                // Error callback
+                function(error) {
+                    let errorMsg = "Unable to get location: ";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMsg += "Permission denied. Please allow location access.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMsg += "Location unavailable. Check GPS is enabled.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMsg += "Request timeout. Try again.";
+                            break;
+                        default:
+                            errorMsg += "Unknown error.";
+                    }
+                    showError(errorMsg);
+                    btn.innerHTML = '🔍 Get My Precise Location';
+                    btn.disabled = false;
+                },
+                options
+            );
+        }
+        
+        function getAddress(lat, lon) {
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        document.getElementById('address-display').innerHTML = 
+                            `<strong>Address:</strong> ${data.display_name}`;
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('address-display').innerHTML = 
+                        '<em>Address not available</em>';
+                });
+        }
+        
+        function saveLocationToServer(lat, lon, accuracy) {
+            fetch('/save_gps_location', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    latitude: lat,
+                    longitude: lon,
+                    accuracy: Math.round(accuracy)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    showError("Failed to save location to server");
+                }
+            })
+            .catch(() => {
+                showError("Network error saving location");
+            });
+        }
+        
+        function proceedToPasscode() {
+            window.location.href = '/set_passcode';
+        }
+        
+        function retryLocation() {
+            document.getElementById('location-info').style.display = 'none';
+            getLocation();
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        // Try to get location automatically on page load
+        window.addEventListener('load', function() {
+            // Check if location is already in session
+            fetch('/check_location')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.has_location) {
+                        document.getElementById('gps-status').innerHTML = 
+                            '<p class="accuracy-good">✅ Location already set</p>';
+                        document.getElementById('location-btn').innerHTML = 
+                            '🔄 Update Location';
+                    }
+                });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Women Safety Device</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1 class="neon-heading">Women Safety Protocol</h1>
+        </div>
+    </header>
+    
+    <main>
+        <div class="menu">
+            <form action="/activate" method="POST">
+                <button type="submit" class="btn activate">Activate Emergency</button>
+            </form>
+            <button class="btn deactivate" onclick="deactivateEmergency()">Deactivate Emergency</button>
+            <button class="btn exit" onclick="exitSystem()">Exit</button>
+        </div>
+        <div id="statusMessage" class="status-message"></div>
+    </main>
+
+    <footer></footer>
+
+    <script>
+        function deactivateEmergency() {
+            document.getElementById('statusMessage').textContent = 'Emergency Deactivated';
+        }
+
+        function exitSystem() {
+            document.getElementById('statusMessage').textContent = 'System Exiting...';
+        }
+    </script>
+</body>
+</html>

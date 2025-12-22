@@ -1,0 +1,122 @@
+from flask import Flask, render_template, request, redirect, url_for
+import threading
+import datetime
+import pywhatkit as kit
+import pygame
+import random
+from geopy.distance import geodesic
+from shapely.geometry import Point as ShapelyPoint, Polygon
+
+app = Flask(__name__)
+
+user_passcode = None  
+TIMEOUT = 10
+emergency_active = False
+danger_detected = False
+alert_sent = False
+timer = None
+
+BOUNDARY_POINTS = [
+    (12.8710, 77.5605),
+    (12.8700, 77.5590),
+    (12.8695, 77.5615),
+    (12.8705, 77.5620),
+]
+
+boundary_polygon = Polygon(BOUNDARY_POINTS)
+
+@app.route('/')
+def index():
+    return render_template('index1.html')
+
+@app.route('/activate', methods=['POST'])
+def activate():
+    global emergency_active, alert_sent
+    emergency_active = True
+    alert_sent = False
+    return redirect(url_for('set_passcode'))
+
+@app.route('/set_passcode', methods=['GET', 'POST'])
+def set_passcode():
+    global user_passcode
+    if request.method == 'POST':
+        user_passcode = request.form['new_passcode']
+        return redirect(url_for('reenter_passcode')) 
+    return render_template('set_passcode.html')
+
+@app.route('/reenter_passcode')
+def reenter_passcode():
+    global timer, alert_sent
+    if timer is None and not alert_sent:
+        timer = threading.Timer(TIMEOUT, timeout_handler)
+        timer.start()
+    return render_template('index3.html')
+
+@app.route('/verify_reenter_passcode', methods=['POST'])
+def verify_reenter_passcode():
+    global danger_detected, timer, alert_sent
+    passcode = request.form['passcode']
+    
+    if passcode == user_passcode:
+        danger_detected = False
+        if timer is not None:
+            timer.cancel()
+            timer = None
+        return render_template('passcode.html')
+    else:
+        if not alert_sent:
+            danger_detected = True
+            alert_sent = True
+            if timer is not None:
+                timer.cancel()
+                timer = None
+            play_emergency_sound()  
+            return redirect(url_for('send_alert'))
+        else:
+             return render_template('alert.html')
+
+def play_emergency_sound():
+    pygame.mixer.init()
+    pygame.mixer.music.load(r'C:\Users\Abhinav S  Bhat\OneDrive\Desktop\5th sem Mini Project\activate message.mp3')
+    pygame.mixer.music.play()
+
+def timeout_handler():
+    global alert_sent
+    if not alert_sent:
+        play_emergency_sound()  
+        send_alert()
+
+@app.route('/send_alert')
+def send_alert():
+    global danger_detected, alert_sent, timer
+    danger_detected = True
+    alert_sent = True
+    location = track_location_within_boundary()
+
+    now = datetime.datetime.now()
+    scheduled_time = now + datetime.timedelta(minutes=2)
+    hour = scheduled_time.hour
+    minute = scheduled_time.minute
+    message = f"Help! Emergency. My location is: Latitude: {location[0]}, Longitude: {location[1]}"
+
+    try:
+        kit.sendwhatmsg("+918431011609", message, hour, minute, 15)
+        if emergency_active:
+            timer = threading.Timer(600, send_alert)
+            timer.start()
+
+        return render_template('alert.html')
+    except Exception as e:
+        return f"Error sending WhatsApp message: {str(e)}"
+
+def track_location_within_boundary():
+    while True:
+        random_lat = random.uniform(min([p[0] for p in BOUNDARY_POINTS]), max([p[0] for p in BOUNDARY_POINTS]))
+        random_lng = random.uniform(min([p[1] for p in BOUNDARY_POINTS]), max([p[1] for p in BOUNDARY_POINTS]))
+        random_point = ShapelyPoint(random_lat, random_lng)
+
+        if boundary_polygon.contains(random_point):
+            return (random_lat, random_lng)
+
+if __name__ == "__main__":
+    app.run(debug=True)
