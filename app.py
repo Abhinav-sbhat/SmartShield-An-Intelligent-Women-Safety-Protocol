@@ -30,7 +30,7 @@ current_location = None  # Will be (lat, lng) or None
 
 @app.route('/')
 def index():
-    return render_template('index1.html')
+    return render_template('index.html')
 
 @app.route('/activate', methods=['POST'])
 def activate():
