@@ -4,9 +4,7 @@ import pywhatkit as kit
 import pygame
 import time
 import random
-import os
 
-IS_SERVER = os.environ.get("RENDER") == "true"
 
 app = Flask(__name__)
 
