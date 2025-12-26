@@ -40,6 +40,7 @@ This ensures instant support and faster response during critical situations.
 ⚙️ Modular Flask backend with real-time logic 
 
 
+
 🧠 System Workflow
 
 User activates Emergency Mode from the browser
@@ -61,13 +62,6 @@ Live location shared to trusted contacts
 Emergency mode safely deactivates 
 
 
-🏗️ Architecture (High-Level)
-
-Browser UI → Flask Backend → Timer & Validation Logic
-
-Auto-Trigger Alert Engine → WhatsApp Automation → Location Sharing
-
-Emergency loop re-activates until safely resolved 
 
 
 🧰 Technology Stack
@@ -87,6 +81,8 @@ Geopy / Google Location Services
 
 OS & Time modules 
 
+
+
 🌍 Google Technologies Used
 
 HTML5 Geolocation API via navigator.geolocation.watchPosition() (high-accuracy mode)
@@ -95,6 +91,7 @@ Google Maps link generation for live location sharing
 
 Chrome / Android Google Location Services for GPS + Wi-Fi + Cell-tower positioning
 (Complies with Google guidelines — Dec 2025) 
+
 
 
 📁 Project Structure
@@ -115,6 +112,7 @@ SmartShield/
 ├── activate message.mp3
 ├── PyWhatKit_DB.txt
 └── README.md
+
 
 ▶️ How to Run the Project (MVP)
 
